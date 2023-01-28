@@ -88,7 +88,7 @@
  * Warnings for old configurations
  */
 #ifndef MOTHERBOARD
-  #error "MOTHERBOARD is required. You must '#define MOTHERBOARD BOARD_MYNAME' (not just '#define BOARD_MYNAME')."
+  #error "MOTHERBOARD is required."
 #elif !defined(X_BED_SIZE) || !defined(Y_BED_SIZE)
   #error "X_BED_SIZE and Y_BED_SIZE are now required!"
 #elif WATCH_TEMP_PERIOD > 500
@@ -513,7 +513,7 @@
 #elif defined(HOME_USING_SPREADCYCLE)
   #error "HOME_USING_SPREADCYCLE is now obsolete. Please remove it."
 #elif defined(DGUS_LCD)
-  #error "DGUS_LCD is now DGUS_LCD_UI ORIGIN|FYSETC|HIPRECY)."
+  #error "DGUS_LCD is now DGUS_LCD_UI_(ORIGIN|FYSETC|HIPRECY)."
 #elif defined(DGUS_SERIAL_PORT)
   #error "DGUS_SERIAL_PORT is now LCD_SERIAL_PORT."
 #elif defined(DGUS_BAUDRATE)
@@ -656,18 +656,6 @@
   #error "EXTRA_LIN_ADVANCE_K is now ADVANCE_K_EXTRA."
 #elif defined(POLAR_SEGMENTS_PER_SECOND) || defined(DELTA_SEGMENTS_PER_SECOND)  || defined(SCARA_SEGMENTS_PER_SECOND) || defined(TPARA_SEGMENTS_PER_SECOND)
   #error "(POLAR|DELTA|SCARA|TPARA)_SEGMENTS_PER_SECOND is now DEFAULT_SEGMENTS_PER_SECOND."
-#elif ANY(DGUS_LCD_UI_ORIGIN, DGUS_LCD_UI_FYSETC, DGUS_LCD_UI_HIPRECY, DGUS_LCD_UI_MKS, DGUS_LCD_UI_RELOADED) && !defined(DGUS_LCD_UI)
-  #error "DGUS_LCD_UI_[TYPE] is now set using DGUS_LCD_UI TYPE."
-#elif defined(DELTA_PRINTABLE_RADIUS)
-  #error "DELTA_PRINTABLE_RADIUS is now PRINTABLE_RADIUS."
-#elif defined(SCARA_PRINTABLE_RADIUS)
-  #error "SCARA_PRINTABLE_RADIUS is now PRINTABLE_RADIUS."
-#elif defined(SCARA_FEEDRATE_SCALING)
-  #error "SCARA_FEEDRATE_SCALING is now FEEDRATE_SCALING."
-#elif defined(MILLISECONDS_PREHEAT_TIME)
-  #error "MILLISECONDS_PREHEAT_TIME is now PREHEAT_TIME_HOTEND_MS."
-#elif defined(EXPERIMENTAL_SCURVE)
-  #error "EXPERIMENTAL_SCURVE is no longer needed and should be removed."
 #endif
 
 // L64xx stepper drivers have been removed
@@ -944,7 +932,7 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
   #error "SET_PROGRESS_MANUALLY requires at least one of SET_PROGRESS_PERCENT, SET_REMAINING_TIME, SET_INTERACTION_TIME to be enabled."
 #endif
 
-#if HAS_LCDPRINT && HAS_EXTRA_PROGRESS && LCD_HEIGHT < 4
+#if HAS_LCDPRINT && LCD_HEIGHT < 4 && ANY(SHOW_PROGRESS_PERCENT, SHOW_ELAPSED_TIME, SHOW_REMAINING_TIME, SHOW_INTERACTION_TIME)
   #error "Displays with fewer than 4 rows of text can't show progress values."
 #endif
 
@@ -1372,9 +1360,10 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
   #else
     static_assert(WITHIN(ADVANCE_K, 0, 10), "ADVANCE_K must be from 0 to 10 (Changed in LIN_ADVANCE v1.5, Marlin 1.1.9).");
   #endif
-
-  #if ENABLED(DIRECT_STEPPING)
-    #error "DIRECT_STEPPING is incompatible with LIN_ADVANCE. (Extrusion is controlled externally by the Step Daemon.)"
+  #if ENABLED(S_CURVE_ACCELERATION) && DISABLED(EXPERIMENTAL_SCURVE)
+    #error "LIN_ADVANCE and S_CURVE_ACCELERATION may not play well together! Enable EXPERIMENTAL_SCURVE to continue."
+  #elif ENABLED(DIRECT_STEPPING)
+    #error "DIRECT_STEPPING is incompatible with LIN_ADVANCE. Enable in external planner if possible."
   #elif NONE(HAS_JUNCTION_DEVIATION, ALLOW_LOW_EJERK) && defined(DEFAULT_EJERK)
     static_assert(DEFAULT_EJERK >= 10, "It is strongly recommended to set DEFAULT_EJERK >= 10 when using LIN_ADVANCE. Enable ALLOW_LOW_EJERK to bypass this alert (e.g., for direct drive).");
   #endif
@@ -1561,21 +1550,6 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
 #endif
 
 /**
- * AUTOTEMP
- */
-#if ENABLED(AUTOTEMP)
-  #ifndef AUTOTEMP_MIN
-    #error "AUTOTEMP requires AUTOTEMP_MIN."
-  #elif !defined(AUTOTEMP_MAX)
-    #error "AUTOTEMP requires AUTOTEMP_MAX."
-  #elif !defined(AUTOTEMP_FACTOR)
-    #error "AUTOTEMP requires AUTOTEMP_FACTOR."
-  #elif AUTOTEMP_MAX < AUTOTEMP_MIN
-    #error "AUTOTEMP_MAX must be greater than or equal to AUTOTEMP_MIN."
-  #endif
-#endif
-
-/**
  * Features that require a min/max/specific NUM_AXES
  */
 #if HAS_LEVELING && !HAS_Z_AXIS
@@ -1675,8 +1649,8 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
 /**
  * Allow only one kinematic type to be defined
  */
-#if MANY(DELTA, MORGAN_SCARA, MP_SCARA, AXEL_TPARA, COREXY, COREXZ, COREYZ, COREYX, COREZX, COREZY, MARKFORGED_XY, MARKFORGED_YX, ARTICULATED_ROBOT_ARM, FOAMCUTTER_XYUV, POLAR)
-  #error "Please enable only one of DELTA, MORGAN_SCARA, MP_SCARA, AXEL_TPARA, COREXY, COREXZ, COREYZ, COREYX, COREZX, COREZY, MARKFORGED_XY, MARKFORGED_YX, ARTICULATED_ROBOT_ARM, FOAMCUTTER_XYUV, or POLAR."
+#if MANY(DELTA, MORGAN_SCARA, MP_SCARA, AXEL_TPARA, COREXY, COREXZ, COREYZ, COREYX, COREZX, COREZY, MARKFORGED_XY, MARKFORGED_YX, ARTICULATED_ROBOT_ARM, FOAMCUTTER_XYUV)
+  #error "Please enable only one of DELTA, MORGAN_SCARA, MP_SCARA, AXEL_TPARA, COREXY, COREXZ, COREYZ, COREYX, COREZX, COREZY, MARKFORGED_XY, MARKFORGED_YX, ARTICULATED_ROBOT_ARM, or FOAMCUTTER_XYUV."
 #endif
 
 /**
@@ -1704,7 +1678,7 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
  * Junction deviation is incompatible with kinematic systems.
  */
 #if HAS_JUNCTION_DEVIATION && IS_KINEMATIC
-  #error "CLASSIC_JERK is required for DELTA, SCARA, and POLAR."
+  #error "CLASSIC_JERK is required for DELTA and SCARA."
 #endif
 
 /**
@@ -1808,7 +1782,7 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
       #error "BLTOUCH requires DEACTIVATE_SERVOS_AFTER_MOVE to be to disabled. Please update your Configuration.h file."
     #endif
 
-    #if ENABLED(INVERTED_PROBE_STATE)
+    #if HAS_INVERTED_PROBE
       #if !Z_MIN_PROBE_ENDSTOP_INVERTING
         #error "BLTOUCH requires Z_MIN_PROBE_ENDSTOP_INVERTING set to true."
       #endif
@@ -1816,7 +1790,7 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
       #error "BLTOUCH requires Z_MIN_PROBE_ENDSTOP_INVERTING set to false."
     #endif
     #if ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN)
-      #if ENABLED(INVERTED_PROBE_STATE)
+      #if HAS_INVERTED_PROBE
         #if !Z_MIN_ENDSTOP_INVERTING
           #error "BLTOUCH requires Z_MIN_ENDSTOP_INVERTING set to true."
         #endif
@@ -1848,7 +1822,7 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
     #elif !HAS_RESUME_CONTINUE
       #error "TOUCH_MI_PROBE currently requires an LCD controller or EMERGENCY_PARSER."
     #endif
-    #if ENABLED(INVERTED_PROBE_STATE)
+    #if HAS_INVERTED_PROBE
       #if !Z_MIN_PROBE_ENDSTOP_INVERTING
         #error "TOUCH_MI_PROBE requires Z_MIN_PROBE_ENDSTOP_INVERTING set to true."
       #endif
@@ -1856,7 +1830,7 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
       #error "TOUCH_MI_PROBE requires Z_MIN_PROBE_ENDSTOP_INVERTING set to false."
     #endif
     #if ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN)
-      #if ENABLED(INVERTED_PROBE_STATE)
+      #if HAS_INVERTED_PROBE
         #if !Z_MIN_ENDSTOP_INVERTING
           #error "TOUCH_MI_PROBE requires Z_MIN_ENDSTOP_INVERTING set to true."
         #endif
@@ -1922,7 +1896,7 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
     static_assert(PROBING_MARGIN_RIGHT >= 0, "PROBING_MARGIN_RIGHT must be >= 0.");
   #endif
 
-  #define _MARGIN(A) TERN(IS_KINEMATIC, PRINTABLE_RADIUS, ((A##_BED_SIZE) / 2))
+  #define _MARGIN(A) TERN(IS_SCARA, SCARA_PRINTABLE_RADIUS, TERN(DELTA, DELTA_PRINTABLE_RADIUS, ((A##_BED_SIZE) / 2)))
   static_assert(PROBING_MARGIN       < _MARGIN(X), "PROBING_MARGIN is too large.");
   static_assert(PROBING_MARGIN_BACK  < _MARGIN(Y), "PROBING_MARGIN_BACK is too large.");
   static_assert(PROBING_MARGIN_FRONT < _MARGIN(Y), "PROBING_MARGIN_FRONT is too large.");
@@ -2015,8 +1989,6 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
 
   #if IS_SCARA
     #error "AUTO_BED_LEVELING_UBL does not yet support SCARA printers."
-  #elif ENABLED(POLAR)
-    #error "AUTO_BED_LEVELING_UBL does not yet support POLAR printers."
   #elif DISABLED(EEPROM_SETTINGS)
     #error "AUTO_BED_LEVELING_UBL requires EEPROM_SETTINGS."
   #elif !WITHIN(GRID_MAX_POINTS_X, 3, 15) || !WITHIN(GRID_MAX_POINTS_Y, 3, 15)
@@ -2396,14 +2368,10 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
   #endif
   #if MAX_CONSECUTIVE_LOW_TEMPERATURE_ERROR_ALLOWED < 5
     #error "Thermistor 66 requires MAX_CONSECUTIVE_LOW_TEMPERATURE_ERROR_ALLOWED ≥ 5."
-  #elif PREHEAT_TIME_HOTEND_MS < 15000
-    #error "Thermistor 66 requires PREHEAT_TIME_HOTEND_MS ≥ 15000, but 30000 or higher is recommended."
+  #elif MILLISECONDS_PREHEAT_TIME < 15000
+    #error "Thermistor 66 requires MILLISECONDS_PREHEAT_TIME ≥ 15000, but 30000 or higher is recommended."
   #endif
   #undef _BAD_MINTEMP
-#endif
-
-#if TEMP_SENSOR_BED == 66 && PREHEAT_TIME_BED_MS < 15000
-  #error "Thermistor 66 requires PREHEAT_TIME_BED_MS ≥ 15000, but 30000 or higher is recommended."
 #endif
 
 /**
@@ -3043,7 +3011,7 @@ static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS
   + (DISABLED(IS_LEGACY_TFT) && ENABLED(TFT_GENERIC)) \
   + (ENABLED(IS_LEGACY_TFT) && COUNT_ENABLED(TFT_320x240, TFT_320x240_SPI, TFT_480x320, TFT_480x320_SPI)) \
   + COUNT_ENABLED(ANYCUBIC_LCD_I3MEGA, ANYCUBIC_LCD_CHIRON, ANYCUBIC_TFT35) \
-  + DGUS_UI_IS(ORIGIN) + DGUS_UI_IS(FYSETC) + DGUS_UI_IS(HIPRECY) + DGUS_UI_IS(MKS) + DGUS_UI_IS(RELOADED) + DGUS_UI_IS(IA_CREALITY) \
+  + COUNT_ENABLED(DGUS_LCD_UI_ORIGIN, DGUS_LCD_UI_FYSETC, DGUS_LCD_UI_HIPRECY, DGUS_LCD_UI_MKS, DGUS_LCD_UI_RELOADED) \
   + COUNT_ENABLED(ENDER2_STOCKDISPLAY, CR10_STOCKDISPLAY) \
   + COUNT_ENABLED(DWIN_CREALITY_LCD, DWIN_LCD_PROUI, DWIN_CREALITY_LCD_JYERSUI, DWIN_MARLINUI_PORTRAIT, DWIN_MARLINUI_LANDSCAPE) \
   + COUNT_ENABLED(FYSETC_MINI_12864_X_X, FYSETC_MINI_12864_1_2, FYSETC_MINI_12864_2_0, FYSETC_GENERIC_12864_1_1) \
@@ -4304,50 +4272,31 @@ static_assert(_PLUS_TEST(4), "HOMING_FEEDRATE_MM_M values must be positive.");
 #undef _BAD_DRIVER
 
 /**
- * Require certain features for DGUS_LCD_UI RELOADED.
+ * Require certain features for DGUS_LCD_UI_RELOADED.
  */
-#if DGUS_UI_IS(RELOADED)
+#if ENABLED(DGUS_LCD_UI_RELOADED)
   #if BUFSIZE < 4
-    #error "DGUS_LCD_UI RELOADED requires a BUFSIZE of at least 4."
+    #error "DGUS_LCD_UI_RELOADED requires a BUFSIZE of at least 4."
   #elif HOTENDS < 1
-    #error "DGUS_LCD_UI RELOADED requires at least 1 hotend."
+    #error "DGUS_LCD_UI_RELOADED requires at least 1 hotend."
   #elif EXTRUDERS < 1
-    #error "DGUS_LCD_UI RELOADED requires at least 1 extruder."
+    #error "DGUS_LCD_UI_RELOADED requires at least 1 extruder."
   #elif !HAS_HEATED_BED
-    #error "DGUS_LCD_UI RELOADED requires a heated bed."
+    #error "DGUS_LCD_UI_RELOADED requires a heated bed."
   #elif FAN_COUNT < 1
-    #error "DGUS_LCD_UI RELOADED requires a fan."
+    #error "DGUS_LCD_UI_RELOADED requires a fan."
   #elif !HAS_BED_PROBE
-    #error "DGUS_LCD_UI RELOADED requires a bed probe."
+    #error "DGUS_LCD_UI_RELOADED requires a bed probe."
   #elif !HAS_MESH
-    #error "DGUS_LCD_UI RELOADED requires mesh leveling."
+    #error "DGUS_LCD_UI_RELOADED requires mesh leveling."
   #elif DISABLED(LCD_BED_TRAMMING)
-    #error "DGUS_LCD_UI RELOADED requires LCD_BED_TRAMMING."
+    #error "DGUS_LCD_UI_RELOADED requires LCD_BED_TRAMMING."
   #elif DISABLED(BABYSTEP_ALWAYS_AVAILABLE)
-    #error "DGUS_LCD_UI RELOADED requires BABYSTEP_ALWAYS_AVAILABLE."
+    #error "DGUS_LCD_UI_RELOADED requires BABYSTEP_ALWAYS_AVAILABLE."
   #elif DISABLED(BABYSTEP_ZPROBE_OFFSET)
-    #error "DGUS_LCD_UI RELOADED requires BABYSTEP_ZPROBE_OFFSET."
+    #error "DGUS_LCD_UI_RELOADED requires BABYSTEP_ZPROBE_OFFSET."
   #elif ENABLED(AUTO_BED_LEVELING_UBL) && DISABLED(UBL_SAVE_ACTIVE_ON_M500)
     #warning "Without UBL_SAVE_ACTIVE_ON_M500, your mesh will not be saved when using the touchscreen."
-  #endif
-#endif
-
-/**
- * Require certain features for DGUS_LCD_UI IA_CREALITY.
- */
-#if DGUS_UI_IS(IA_CREALITY)
-  #if DISABLED(ADVANCED_PAUSE_FEATURE)
-    #error "DGUS_LCD_UI IA_CREALITY requires ADVANCED_PAUSE_FEATURE."
-  #elif DISABLED(LCD_BED_TRAMMING)
-    #error "DGUS_LCD_UI IA_CREALITY requires LCD_BED_TRAMMING."
-  #elif DISABLED(CLASSIC_JERK)
-    #error "DGUS_LCD_UI IA_CREALITY requires CLASSIC_JERK."
-  #elif DISABLED(BABYSTEPPING)
-    #error "DGUS_LCD_UI IA_CREALITY requires BABYSTEPPING."
-  #elif NUM_RUNOUT_SENSORS > 1
-    #error "DGUS_LCD_UI IA_CREALITY requires NUM_RUNOUT_SENSORS < 2."
-  #elif NONE(AUTO_BED_LEVELING_BILINEAR, AUTO_BED_LEVELING_UBL, MESH_BED_LEVELING)
-    #error "DGUS_LCD_UI IA_CREALITY requires AUTO_BED_LEVELING_BILINEAR, AUTO_BED_LEVELING_UBL, or MESH_BED_LEVELING."
   #endif
 #endif
 
@@ -4379,17 +4328,10 @@ static_assert(_PLUS_TEST(4), "HOMING_FEEDRATE_MM_M values must be positive.");
     #error "Input Shaping is not compatible with POLARGRAPH kinematics."
   #elif ENABLED(DIRECT_STEPPING)
     #error "Input Shaping is not compatible with DIRECT_STEPPING."
-  #elif BOTH(INPUT_SHAPING_X, CORE_IS_XZ)
-    #error "INPUT_SHAPING_X is not supported with COREXZ."
-  #elif BOTH(INPUT_SHAPING_Y, CORE_IS_YZ)
-    #error "INPUT_SHAPING_Y is not supported with COREYZ."
-  #elif ANY(CORE_IS_XY, MARKFORGED_XY, MARKFORGED_YX)
-    #if !BOTH(INPUT_SHAPING_X, INPUT_SHAPING_Y)
-      #error "INPUT_SHAPING_X and INPUT_SHAPING_Y must both be enabled for COREXY, COREYX, or MARKFORGED_*."
-    #else
-      static_assert(SHAPING_FREQ_X == SHAPING_FREQ_Y, "SHAPING_FREQ_X and SHAPING_FREQ_Y must be the same for COREXY / COREYX / MARKFORGED_*.");
-      static_assert(SHAPING_ZETA_X == SHAPING_ZETA_Y, "SHAPING_ZETA_X and SHAPING_ZETA_Y must be the same for COREXY / COREYX / MARKFORGED_*.");
-    #endif
+  #elif ENABLED(INPUT_SHAPING_X) && ANY(CORE_IS_XY, CORE_IS_XZ, MARKFORGED_XY, MARKFORGED_YX)
+    #error "INPUT_SHAPING_X is not supported with COREXY, COREYX, COREXZ, COREZX, or MARKFORGED_*."
+  #elif ENABLED(INPUT_SHAPING_Y) && ANY(CORE_IS_XY, CORE_IS_YZ, MARKFORGED_XY, MARKFORGED_YX)
+    #error "INPUT_SHAPING_Y is not supported with COREXY, COREYX, COREYZ, COREZY, or MARKFORGED_*."
   #endif
 
   #ifdef __AVR__

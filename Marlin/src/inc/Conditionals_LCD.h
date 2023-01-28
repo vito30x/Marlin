@@ -36,21 +36,6 @@
   #define FYSETC_MINI_12864_2_1
 #endif
 
-// Old settings are now conditional on DGUS_LCD_UI
-#if DGUS_UI_IS(ORIGIN)
-  #define DGUS_LCD_UI_ORIGIN 1
-#elif DGUS_UI_IS(FYSETC)
-  #define DGUS_LCD_UI_FYSETC 1
-#elif DGUS_UI_IS(HIPRECY)
-  #define DGUS_LCD_UI_HIPRECY 1
-#elif DGUS_UI_IS(MKS)
-  #define DGUS_LCD_UI_MKS 1
-#elif DGUS_UI_IS(RELOADED)
-  #define DGUS_LCD_UI_RELOADED 1
-#elif DGUS_UI_IS(IA_CREALITY)
-  #define DGUS_LCD_UI_IA_CREALITY 1
-#endif
-
 /**
  * General Flags that may be set below by specific LCDs
  *
@@ -324,7 +309,7 @@
   #define IS_ULTIPANEL 1
 #endif
 
-// TFT Legacy Compatibility
+// TFT Compatibility
 #if ANY(FSMC_GRAPHICAL_TFT, SPI_GRAPHICAL_TFT, TFT_320x240, TFT_480x320, TFT_320x240_SPI, TFT_480x320_SPI, TFT_LVGL_UI_FSMC, TFT_LVGL_UI_SPI)
   #define IS_LEGACY_TFT 1
   #define TFT_GENERIC
@@ -477,11 +462,12 @@
 #endif
 
 // Aliases for LCD features
-#if !DGUS_UI_IS(NONE)
+#if ANY(DGUS_LCD_UI_ORIGIN, DGUS_LCD_UI_FYSETC, DGUS_LCD_UI_HIPRECY, DGUS_LCD_UI_MKS)
+  #define HAS_DGUS_LCD_CLASSIC 1
+#endif
+
+#if EITHER(HAS_DGUS_LCD_CLASSIC, DGUS_LCD_UI_RELOADED)
   #define HAS_DGUS_LCD 1
-  #if DGUS_UI_IS(ORIGIN, FYSETC, HIPRECY, MKS)
-    #define HAS_DGUS_LCD_CLASSIC 1
-  #endif
 #endif
 
 // Extensible UI serial touch screens. (See src/lcd/extui)
@@ -1407,7 +1393,7 @@
 #if ANY(MORGAN_SCARA, MP_SCARA, AXEL_TPARA)
   #define IS_SCARA 1
   #define IS_KINEMATIC 1
-#elif ANY(DELTA, POLARGRAPH, POLAR)
+#elif EITHER(DELTA, POLARGRAPH)
   #define IS_KINEMATIC 1
 #else
   #define IS_CARTESIAN 1
@@ -1525,6 +1511,30 @@
   #endif
 #endif
 
+#if ENABLED(TFT_RES_320x240)
+  #define TFT_WIDTH  320
+  #define TFT_HEIGHT 240
+  #define GRAPHICAL_TFT_UPSCALE 2
+#elif ENABLED(TFT_RES_480x272)
+  #define TFT_WIDTH  480
+  #define TFT_HEIGHT 272
+  #define GRAPHICAL_TFT_UPSCALE 2
+#elif ENABLED(TFT_RES_480x320)
+  #define TFT_WIDTH  480
+  #define TFT_HEIGHT 320
+  #define GRAPHICAL_TFT_UPSCALE 3
+#elif ENABLED(TFT_RES_1024x600)
+  #define TFT_WIDTH  1024
+  #define TFT_HEIGHT 600
+  #if ENABLED(TOUCH_SCREEN)
+    #define GRAPHICAL_TFT_UPSCALE 6
+    #define TFT_PIXEL_OFFSET_X 120
+  #else
+    #define GRAPHICAL_TFT_UPSCALE 8
+    #define TFT_PIXEL_OFFSET_X 0
+  #endif
+#endif
+
 // FSMC/SPI TFT Panels using standard HAL/tft/tft_(fsmc|spi|ltdc).h
 #if ENABLED(TFT_INTERFACE_FSMC)
   #define HAS_FSMC_TFT 1
@@ -1549,41 +1559,8 @@
   #endif
 #endif
 
-#if ANY(HAS_SPI_TFT, HAS_FSMC_TFT, HAS_LTDC_TFT)
-  #include "../lcd/tft_io/tft_orientation.h"
-#endif
-
-#if ENABLED(TFT_RES_320x240)
-  #if ENABLED(TFT_COLOR_UI_PORTRAIT)
-    #define TFT_WIDTH  240
-    #define TFT_HEIGHT 320
-  #else
-    #define TFT_WIDTH  320
-    #define TFT_HEIGHT 240
-  #endif
-  #define GRAPHICAL_TFT_UPSCALE 2
-#elif ENABLED(TFT_RES_480x272)
-  #define TFT_WIDTH  480
-  #define TFT_HEIGHT 272
-  #define GRAPHICAL_TFT_UPSCALE 2
-#elif ENABLED(TFT_RES_480x320)
-  #define TFT_WIDTH  480
-  #define TFT_HEIGHT 320
-  #define GRAPHICAL_TFT_UPSCALE 3
-#elif ENABLED(TFT_RES_1024x600)
-  #define TFT_WIDTH  1024
-  #define TFT_HEIGHT 600
-  #if ENABLED(TOUCH_SCREEN)
-    #define GRAPHICAL_TFT_UPSCALE 6
-    #define TFT_PIXEL_OFFSET_X 120
-  #else
-    #define GRAPHICAL_TFT_UPSCALE 8
-    #define TFT_PIXEL_OFFSET_X 0
-  #endif
-#endif
-
 #if ENABLED(TFT_COLOR_UI)
-  #if (TFT_WIDTH == 320 && TFT_HEIGHT == 240) || (TFT_WIDTH == 240 && TFT_HEIGHT == 320)
+  #if TFT_HEIGHT == 240
     #if ENABLED(TFT_INTERFACE_SPI)
       #define TFT_320x240_SPI
     #elif ENABLED(TFT_INTERFACE_FSMC)
@@ -1620,11 +1597,7 @@
   #define HAS_UI_1024x600 1
 #endif
 #if ANY(HAS_UI_320x240, HAS_UI_480x320, HAS_UI_480x272)
-  #if ENABLED(TFT_COLOR_UI_PORTRAIT)
-    #define LCD_HEIGHT TERN(TOUCH_SCREEN, 6, 7) // Fewer lines with touch buttons onscreen
-  #else
-    #define LCD_HEIGHT TERN(TOUCH_SCREEN, 8, 9) // Fewer lines with touch buttons onscreen
-  #endif
+  #define LCD_HEIGHT TERN(TOUCH_SCREEN, 6, 7)   // Fewer lines with touch buttons onscreen
 #elif HAS_UI_1024x600
   #define LCD_HEIGHT TERN(TOUCH_SCREEN, 12, 13) // Fewer lines with touch buttons onscreen
 #endif

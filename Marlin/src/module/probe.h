@@ -49,16 +49,6 @@
   #define PROBE_TRIGGERED() (READ(Z_MIN_PIN) != Z_MIN_ENDSTOP_INVERTING)
 #endif
 
-#if ALL(DWIN_LCD_PROUI, INDIVIDUAL_AXIS_HOMING_SUBMENU, MESH_BED_LEVELING)
-  #define Z_POST_CLEARANCE HMI_data.z_after_homing
-#elif defined(Z_AFTER_HOMING)
-  #define Z_POST_CLEARANCE Z_AFTER_HOMING
-#elif defined(Z_HOMING_HEIGHT)
-  #define Z_POST_CLEARANCE Z_HOMING_HEIGHT
-#else
-  #define Z_POST_CLEARANCE 10
-#endif
-
 #if ENABLED(PREHEAT_BEFORE_LEVELING)
   #ifndef LEVELING_NOZZLE_TEMP
     #define LEVELING_NOZZLE_TEMP 0
@@ -193,8 +183,12 @@ public:
 
   #if HAS_BED_PROBE || HAS_LEVELING
     #if IS_KINEMATIC
-      static constexpr float probe_radius(const xy_pos_t &probe_offset_xy=offset_xy) {
-        return float(PRINTABLE_RADIUS) - _MAX(PROBING_MARGIN, HYPOT(probe_offset_xy.x, probe_offset_xy.y));
+      static constexpr float printable_radius = (
+        TERN_(DELTA, DELTA_PRINTABLE_RADIUS)
+        TERN_(IS_SCARA, SCARA_PRINTABLE_RADIUS)
+      );
+      static constexpr float probe_radius(const xy_pos_t &probe_offset_xy = offset_xy) {
+        return printable_radius - _MAX(PROBING_MARGIN, HYPOT(probe_offset_xy.x, probe_offset_xy.y));
       }
     #endif
 
